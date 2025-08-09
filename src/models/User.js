@@ -1,17 +1,23 @@
 import mongoose from 'mongoose';
 
-const ProviderEnum = ['local']; // на будущее можно добавить 'google','github'
+const ProviderEnum = ['local', 'google'];
+
+const ProviderLinkSchema = new mongoose.Schema({
+  provider: { type: String, enum: ProviderEnum, required: true },
+  providerId: { type: String, required: true },
+}, { _id: false });
 
 const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, index: true },
   name: { type: String, required: true },
-  provider: { type: String, enum: ProviderEnum, default: 'local' },
+  provider: { type: String, enum: ProviderEnum, default: 'local' }, // для бэк-совместимости
+  providers: { type: [ProviderLinkSchema], default: [] },            // связи с OAuth-провайдерами
   avatar: { type: String, default: '' },
   isAdmin: { type: Boolean, default: false },
   isBlocked: { type: Boolean, default: false },
-  lang: { type: String, default: 'ru' },   // ru / en и т.п.
-  theme: { type: String, default: 'light' }, // light / dark / system
-  passwordHash: { type: String, required: true }, // техническое поле для локальной аутентификации
+  lang: { type: String, default: 'ru' },
+  theme: { type: String, default: 'light' },
+  passwordHash: { type: String, default: '' }, // может быть пустым для Google-аккаунтов
 }, { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } });
 
 UserSchema.methods.toClient = function toClient() {

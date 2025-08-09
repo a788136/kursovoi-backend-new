@@ -12,6 +12,8 @@ import usersRoutes from './routes/users.js';
 import { bootstrapAdmin } from './lib/bootstrapAdmin.js';
 import { loadEnv } from './config/env.js';
 
+import passport from './config/passport.js';
+
 const app = express();
 
 // Подключение БД и возможный автосоздание админа
@@ -35,6 +37,7 @@ app.use(session({
   store: sessionStore,
 }));
 
+
 // Технич. эндпоинты (уберут 404 HEAD / в логах)
 app.head('/', (req, res) => res.sendStatus(200));
 app.get('/', (req, res) => res.status(200).json({ ok: true, name: 'auth-backend', version: '1.0.0' }));
@@ -43,6 +46,9 @@ app.get('/favicon.ico', (req, res) => res.sendStatus(204));
 // Основные роуты
 app.use('/auth', authRoutes);
 app.use('/users', usersRoutes);
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Health
 app.get('/health', (req, res) => res.status(200).json({ ok: true }));

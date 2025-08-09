@@ -3,6 +3,9 @@ import bcrypt from 'bcryptjs';
 import { User } from '../models/User.js';
 import { requireAuth, attachUser } from '../middleware/auth.js';
 
+import passport from '../config/passport.js';
+import { buildRedirect } from '../lib/buildRedirect.js';
+
 const router = Router();
 
 /**
@@ -45,4 +48,24 @@ router.get('/me', attachUser, async (req, res) => {
   res.json({ authenticated: true, user: user.toClient() });
 });
 
+// === Google OAuth ===
+/**
+ * Старт: /auth/google
+ * (через фронтовый прокси это будет /api/auth/google)
+ */
+router.get('/google', passport.authenticate('google', {
+  scope: ['profile', 'email'],
+  prompt: 'select_account'
+}));
+
+/**
+ * Callback: /auth/google/callback
+ */
+router.get('/google/callback',
+  passport.authenticate('google', { failureRedirect: () => buildRedirect('/?error=oauth_failed') }),
+  (req, res) => {
+    // Успешная аутентификация → редирект на фронт
+    return res.redirect(buildRedirect('/'));
+  }
+);
 export default router;
