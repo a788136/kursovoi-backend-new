@@ -3,17 +3,24 @@ import { loadEnv } from './env.js';
 
 const { CLIENT_ORIGINS } = loadEnv();
 
-/** Поддержка масок вида https://app-*.vercel.app */
-function matchOrigin(origin, patterns) {
+// Проверка origin по маске. Сравниваем целиком "protocol//host".
+function isAllowed(origin) {
   if (!origin) return false;
   try {
-    const url = new URL(origin);
-    const o = `${url.protocol}//${url.host}`;
-    return patterns.some(p => {
-      const u = new URL(p.replace('*', 'example')); // проверка формата
-      const pattern = p.replace(/\./g, '\\.').replace(/\*/g, '.*');
-      const re = new RegExp('^' + pattern + '$', 'i');
-      return re.test(o);
+    const u = new URL(origin);
+    const candidate = `${u.protocol}//${u.host}`; // например, https://site.vercel.app
+
+    return CLIENT_ORIGINS.some(pattern => {
+      // pattern типа "https://app-*.vercel.app"
+      const re = new RegExp(
+        '^' +
+          pattern
+            .replace(/\./g, '\\.')
+            .replace(/\*/g, '.*') +
+        '$',
+        'i'
+      );
+      return re.test(candidate);
     });
   } catch {
     return false;
@@ -21,14 +28,21 @@ function matchOrigin(origin, patterns) {
 }
 
 export const corsMiddleware = cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // прямые curl/health
-    const allowed = matchOrigin(origin, CLIENT_ORIGINS);
-    if (allowed) return callback(null, true);
-    console.warn('[CORS] Blocked origin:', origin, 'Allowed:', CLIENT_ORIGINS);
-    return callback(new Error('Not allowed by CORS'));
+  // ВАЖНО: возвращаем конкретный origin (а не '*'), когда он разрешён
+  origin(origin, cb) {
+    // Для запросов без Origin (curl/health) CORS не нужен — пропускаем
+    if (!origin) return cb(null, true);
+
+    if (isAllowed(origin)) {
+      return cb(null, origin);
+    }
+
+    console.warn('[CORS] Blocked origin:', origin, '| Allowed:', CLIENT_ORIGINS);
+    return cb(new Error('Not allowed by CORS'));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'DELETE', 'PUT', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['set-cookie'],
+  optionsSuccessStatus: 204, // чтобы старые браузеры/прокси не спотыкались
 });

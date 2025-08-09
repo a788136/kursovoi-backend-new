@@ -17,7 +17,11 @@ export function loadEnv() {
   if (!SESSION_SECRET) throw new Error('SESSION_SECRET is required');
   if (!CLIENT_URL) throw new Error('CLIENT_URL is required');
 
-  const CLIENT_ORIGINS = CLIENT_URL.split(',').map(s => s.trim()).filter(Boolean);
+  // Только домены, без путей. Можно маски для превью: https://app-*.vercel.app
+  const CLIENT_ORIGINS = CLIENT_URL
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
 
   return {
     NODE_ENV,

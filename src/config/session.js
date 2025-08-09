@@ -6,7 +6,7 @@ const { MONGO_URI, SESSION_SECRET, NODE_ENV } = loadEnv();
 
 export const sessionStore = MongoStore.create({
   mongoUrl: MONGO_URI,
-  ttl: 60 * 60 * 24 * 7 // 7 days
+  ttl: 60 * 60 * 24 * 7, // 7 days
 });
 
 export const sessionConfig = {
@@ -16,10 +16,8 @@ export const sessionConfig = {
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    sameSite: 'none',   // для разных доменов (Render ↔ Vercel)
-    secure: true,       // обязательно в проде (HTTPS)
-    maxAge: 1000 * 60 * 60 * 24 * 7
-  }
+    sameSite: 'none',                 // кросс‑домен (Vercel ↔ Render)
+    secure: NODE_ENV === 'production',// в проде обязательно HTTPS
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+  },
 };
-
-// На локалке (если вдруг) можно ослабить, но мы деплоим сразу — оставляем secure + sameSite none.
